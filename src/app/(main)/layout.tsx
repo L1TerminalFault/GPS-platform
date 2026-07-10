@@ -49,10 +49,10 @@ function AuthLoader({ children }: { children: React.ReactNode }) {
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider
-      afterSignOutUrl="/home"
-      appearance={{ theme: dark }}
-    >
+    // <ClerkProvider
+    //   afterSignOutUrl="/home"
+    //   appearance={{ theme: dark }}
+    // >
       <AuthLoader>
         <TitleBar />
         <div className="min-h-screen -z-90 flex w-full bg-gray-900/10">
@@ -60,6 +60,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
         <NavBar />
       </AuthLoader>
-    </ClerkProvider>
+    // </ClerkProvider>
   );
 }

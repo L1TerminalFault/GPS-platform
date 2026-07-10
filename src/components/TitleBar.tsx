@@ -16,7 +16,7 @@ export default function TitleBar() {
 				</div>
 
 				<div className="flex shrink-0 items-center gap-2">
-				<Show when="signed-in">
+				{ /* <Show when="signed-in">
 						<UserButton
 							showName
 							appearance={{
@@ -35,7 +35,7 @@ export default function TitleBar() {
 								Sign In
 							</div>
 						</SignInButton>
-					</Show>
+					</Show> */ }
 				</div>
 			</div>
 		</div>
