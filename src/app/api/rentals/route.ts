@@ -11,6 +11,7 @@ export async function GET(req: Request) {
     const results = await RentalCatalogue.find().sort({ createdAt: -1 });
     return NextResponse.json(results);
   } catch (err: any) {
+	  console.error("Error: ", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
     const result = await RentalCatalogue.create(data);
     return NextResponse.json(result);
   } catch (err: any) {
+	  console.error("Error: ", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
@@ -42,6 +44,7 @@ export async function PUT(req: Request) {
     const result = await RentalCatalogue.findByIdAndUpdate(_id, updateData, { new: true });
     return NextResponse.json(result);
   } catch (err: any) {
+	  console.error("Error: ", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
@@ -58,6 +61,7 @@ export async function DELETE(req: Request) {
     await RentalCatalogue.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
   } catch (err: any) {
+	  console.error("Error: ", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

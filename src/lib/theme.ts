@@ -160,7 +160,7 @@ type ThemeStore = {
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get) => ({
-      currentTheme: defaultThemes[0], // current theme is default
+      currentTheme: defaultThemes[6], // current theme is default
       setTheme: (theme) => set({ currentTheme: theme }),
       updateCustomColor: (bg) => {
         const t = get().currentTheme;
@@ -193,4 +193,4 @@ export const useThemeStore = create<ThemeStore>()(
       name: "slkdlskdfj-theme-storage",
     }
   )
-);
+
