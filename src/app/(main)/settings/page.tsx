@@ -154,7 +154,7 @@ export default function SettingsPage() {
         </motion.div>
 
         {/* About Section */}
-        <motion.div variants={itemVariants} className="bg-theme-card backdrop-blur-2xl border border-theme-border/30 rounded-3xl p-8 flex flex-col gap-4 shadow-xl w-full">
+        <motion.div variants={itemVariants} className="hidden bg-theme-card backdrop-blur-2xl border border-theme-border/30 rounded-3xl p-8 flex flex-col gap-4 shadow-xl w-full">
           <div className="text-xl font-bold tracking-wide">About</div>
           <div className="flex flex-col gap-4">
             <div className="py-4 px-6 bg-theme-background/50 rounded-2xl flex flex-col gap-2">
