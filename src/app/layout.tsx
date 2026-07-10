@@ -8,8 +8,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Vend Management",
-  description: "Premium Vending UI",
+  title: "GPS Tracking Platform",
+  description: "Premium tracking platform",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
