@@ -1,6 +1,6 @@
 "use client";
 
-import { ClerkProvider, useUser } from "@clerk/nextjs";
+// import { ClerkProvider, useUser } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import { useEffect } from "react";
 import TitleBar from "@/components/TitleBar";

@@ -1,6 +1,6 @@
 "use client";
 
-import { SignInButton, UserButton, Show } from "@clerk/nextjs";
+// import { SignInButton, UserButton, Show } from "@clerk/nextjs";
 
 const VERSION_STRING = "1.0";
 
