@@ -4,7 +4,8 @@ import { getMockData } from "@/lib/mock-data";
 
 export async function GET(req: Request) {
   try {
-    if (process.env.NODE_ENV === "development") {
+    // if (process.env.NODE_ENV === "development") {
+    if (true) {
       return NextResponse.json(getMockData("CarGPS"));
     }
     await dbConnect();
@@ -18,7 +19,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    if (process.env.NODE_ENV === "development") {
+    // if (process.env.NODE_ENV === "development") {
+    if (true) {
       const data = await req.json();
       return NextResponse.json({ _id: "mock_post_id", ...data, createdAt: new Date() });
     }
@@ -34,7 +36,8 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    if (process.env.NODE_ENV === "development") {
+    // if (process.env.NODE_ENV === "development") {
+    if (true) {
       const data = await req.json();
       return NextResponse.json({ ...data, updatedAt: new Date() });
     }
@@ -51,7 +54,8 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    if (process.env.NODE_ENV === "development") {
+    // if (process.env.NODE_ENV === "development") {
+    if (true) {
       return NextResponse.json({ success: true, message: "Mock deleted" });
     }
     await dbConnect();
