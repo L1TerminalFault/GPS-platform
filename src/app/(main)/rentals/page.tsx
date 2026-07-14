@@ -1,36 +1,124 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { useUser } from "@clerk/nextjs";
 import gsap from "gsap";
-import { FiBox, FiCheckCircle, FiXCircle, FiFilter, FiSearch, FiShoppingCart, FiCommand } from "react-icons/fi";
+import { FiBox, FiFilter, FiSearch, FiShoppingCart, FiPlus, FiCheck, FiX } from "react-icons/fi";
 import { CgSpinner } from "react-icons/cg";
-import Image from "next/image";
+import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
+import { useAppStore } from "@/lib/store";
+
+type RentalFilter = "all" | "available" | "rented";
+
+const FILTER_OPTIONS: { value: RentalFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "available", label: "Available" },
+  { value: "rented", label: "Rented" },
+];
+
+/** Known manufacturer logos (vehiclespecs brand-logos via jsDelivr). */
+const BRAND_LOGO_SLUGS: Record<string, string> = {
+  tesla: "tesla",
+  bmw: "bmw",
+  audi: "audi",
+  mercedes: "mercedes-benz",
+  "mercedes-benz": "mercedes-benz",
+  mercedesbenz: "mercedes-benz",
+  porsche: "porsche",
+  toyota: "toyota",
+  honda: "honda",
+  ford: "ford",
+  chevrolet: "chevrolet",
+  volkswagen: "volkswagen",
+  volvo: "volvo",
+  nissan: "nissan",
+  hyundai: "hyundai",
+  kia: "kia",
+  lexus: "lexus",
+  ferrari: "ferrari",
+  lamborghini: "lamborghini",
+  jaguar: "jaguar",
+  landrover: "land-rover",
+  "land rover": "land-rover",
+  mazda: "mazda",
+  subaru: "subaru",
+  jeep: "jeep",
+};
+
+function brandLogoUrl(carName?: string): string | null {
+  if (!carName?.trim()) return null;
+  const key = carName.trim().toLowerCase();
+  const slug = BRAND_LOGO_SLUGS[key] || BRAND_LOGO_SLUGS[key.replace(/\s+/g, "")];
+  if (!slug) return null;
+  return `https://cdn.jsdelivr.net/gh/vehiclespecs/brand-logos@main/${slug}-logo.svg`;
+}
+
+function BrandLabel({ name }: { name?: string }) {
+  const logo = brandLogoUrl(name);
+  const [failed, setFailed] = useState(false);
+
+  if (!name) return null;
+
+  if (logo && !failed) {
+    return (
+      <span className="text-xs uppercase tracking-widest text-theme-text/50 font-bold flex items-center gap-2">
+        <img
+          src={logo}
+          alt=""
+          className="w-4 h-4 object-contain"
+          onError={() => setFailed(true)}
+        />
+        {name}
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-xs uppercase tracking-widest text-theme-text/50 font-bold">
+      {name}
+    </span>
+  );
+}
 
 export default function RentalsPage() {
-  const [rentals, setRentals] = useState<any[]>([]);
+  const { user } = useUser();
+  const { rentals, ensureRentals } = useAppStore();
   const [loading, setLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterActive, setFilterActive] = useState(false);
+  const [filter, setFilter] = useState<RentalFilter>("all");
+  const [showFilterPopup, setShowFilterPopup] = useState(false);
 
   const headerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/rentals")
-      .then(res => res.json())
-      .then(data => {
-        setRentals(data);
-        setLoading(false);
-      });
+    ensureRentals()
+      .then(() => setLoading(false))
+      .catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setShowFilterPopup(false);
+      }
+    };
+    if (showFilterPopup) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showFilterPopup]);
 
   useEffect(() => {
     if (loading) return;
     if (headerRef.current) gsap.fromTo(headerRef.current, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
     if (gridRef.current) gsap.fromTo(gridRef.current.children, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.4, stagger: 0.1, ease: "back.out(1.7)" });
-  }, [loading, searchQuery, filterActive]);
+  }, [loading, searchQuery, filter]);
+
 
   if (loading) {
      return (
@@ -42,17 +130,20 @@ export default function RentalsPage() {
   }
 
   const displayedRentals = rentals.filter(r => {
-    if (filterActive && r.isRented) return false;
+    if (filter === "available" && r.isRented) return false;
+    if (filter === "rented" && !r.isRented) return false;
     if (searchQuery.trim()) {
        const q = searchQuery.toLowerCase();
-       return r.carName.toLowerCase().includes(q) || r.carModel.toLowerCase().includes(q);
+       return r.carName?.toLowerCase().includes(q) || r.carModel?.toLowerCase().includes(q);
     }
     return true;
   });
 
+  const activeFilterLabel = FILTER_OPTIONS.find(o => o.value === filter)?.label ?? "All";
+
   return (
-    <div className="w-full min-h-screen p-6 px-4 md:px-8 pb-32">
-      <div ref={headerRef} className="flex flex-col sm:flex-row w-full justify-between items-start sm:items-center gap-4 mb-8">
+    <div className="w-full min-h-screen p-6 px-4 md:px-8 pb-32 relative">
+      <div ref={headerRef} className="relative z-40 flex flex-col sm:flex-row w-full justify-between items-start sm:items-center gap-4 mb-8">
         <div className="flex flex-col gap-2">
           <h2 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
             <FiBox className="text-theme-accent" /> Fleet Catalogue
@@ -73,38 +164,88 @@ export default function RentalsPage() {
                 onChange={e => setSearchQuery(e.target.value)}
              />
           </div>
-          <button 
-             onClick={() => setFilterActive(!filterActive)}
-             className={`p-2 border rounded-full transition-colors flex items-center gap-1 ${filterActive ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' : 'border-theme-border/50 hover:bg-theme-card bg-theme-background text-theme-text'}`}
-          >
-             <FiFilter />
-          </button>
+
+          <div className="relative z-50" ref={filterRef}>
+            <button 
+               onClick={() => setShowFilterPopup(!showFilterPopup)}
+               className={`px-3 py-2 border rounded-full transition-colors flex items-center gap-2 text-sm font-semibold ${filter !== "all" ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' : 'border-theme-border/50 hover:bg-theme-card bg-theme-background text-theme-text'}`}
+            >
+               <FiFilter />
+               <span className="hidden sm:inline">{activeFilterLabel}</span>
+            </button>
+
+            <AnimatePresence>
+              {showFilterPopup && (
+                <>
+                  <div
+                    className="fixed inset-0 z-[60]"
+                    onClick={() => setShowFilterPopup(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute right-0 top-[110%] z-[70] min-w-[180px] bg-theme-card backdrop-blur-xl border border-theme-border shadow-2xl rounded-3xl p-2 overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-theme-border/50 mb-1">
+                      <span className="text-xs uppercase tracking-widest font-bold text-theme-text/50">Filter by</span>
+                      <button
+                        onClick={() => setShowFilterPopup(false)}
+                        className="p-1 rounded-full hover:bg-theme-background transition-colors"
+                      >
+                        <FiX className="text-sm" />
+                      </button>
+                    </div>
+                    {FILTER_OPTIONS.map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setFilter(option.value);
+                          setShowFilterPopup(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 rounded-2xl flex items-center justify-between hover:bg-theme-accent/10 transition-colors ${filter === option.value ? "bg-theme-accent/15 text-theme-accent font-bold" : "text-theme-text"}`}
+                      >
+                        <span className="text-sm">{option.label}</span>
+                        {filter === option.value && <FiCheck className="text-theme-accent" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+          
+          {user && (
+            <Link
+              href="/rentals/add"
+              className="flex items-center gap-2 px-4 py-2 bg-theme-accent text-white rounded-full font-bold text-sm hover:shadow-lg shadow-theme-accent/20 transition-all hover:scale-105"
+            >
+              <FiPlus /> Add Rental
+            </Link>
+          )}
         </div>
       </div>
 
-      <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div ref={gridRef} className="relative z-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {displayedRentals.map((car, idx) => (
-           <div key={`${car._id}-${idx}`} className="group flex flex-col bg-theme-card border border-theme-border/30 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+           <Link 
+             href={`/rentals/${car._id}`} 
+             key={`${car._id}-${idx}`} 
+             className="group flex flex-col bg-theme-card border border-theme-border/30 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+           >
              <div className="w-full aspect-[4/5] bg-theme-background relative overflow-hidden flex items-center justify-center">
                 <img 
-                  src={car.carImageURL || "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2"} 
+                  src={car.carImageURLs?.[0] || car.carImageURL || "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2"} 
                   alt={car.carName}
                   className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
                 />
-                <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-lg border ${car.isRented ? 'bg-red-500/10 text-red-100 border-red-500/50' : 'bg-emerald-500/10 text-emerald-100 border-emerald-500/50'}`}>
-                   {car.isRented ? 'Rented' : 'Available'}
-                </div>
                 <div className="absolute top-4 left-4 bg-theme-card/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-theme-border/30 text-theme-text">
                    ${car.pricePerMonth} <span className="opacity-50 text-[10px] uppercase">/mo</span>
                 </div>
              </div>
              
              <div className="flex flex-col p-5 gap-1 relative z-10 bg-theme-card border-t border-theme-border/30 h-1/2">
-                <span className="text-xs uppercase tracking-widest text-theme-text/40 font-bold flex items-center gap-2 bg-theme-background w-fit px-2 py-0.5 rounded-lg border border-theme-border/50">
-                   {/* Brand icon representation */}
-                   <img src={`https://ui-avatars.com/api/?name=${car.carName}&background=random&size=16`} className="rounded-full w-3 h-3 grayscale opacity-80" alt="brand" /> 
-                   {car.carName}
-                </span>
+                <BrandLabel name={car.carName} />
                 <h3 className="text-lg font-black mt-2">{car.carModel}</h3>
                 
                 <p className="text-xs text-theme-text/60 mt-1 line-clamp-2 min-h-[32px]">
@@ -112,17 +253,16 @@ export default function RentalsPage() {
                 </p>
 
                 <div className="mt-auto pt-4 border-t border-theme-border/30 flex justify-between items-center">
-                   <span className="text-[10px] uppercase tracking-widest text-theme-text/40">ID: {car._id.split('_').pop()}</span>
-                   <button 
-                     disabled={car.isRented}
-                     className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all focus:scale-95 ${car.isRented ? 'bg-theme-background border border-theme-border/50 text-theme-text/30 cursor-not-allowed' : 'bg-theme-accent text-white hover:shadow-lg shadow-theme-accent/20'}`}
+                   <span className="text-[10px] uppercase tracking-widest text-theme-text/40">ID: {car._id?.toString().split('_').pop() || car._id?.toString().slice(-4)}</span>
+                   <span
+                     className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${car.isRented ? 'bg-theme-background border border-theme-border/50 text-theme-text/30' : 'bg-theme-accent text-white shadow-theme-accent/20'}`}
                    >
                       <FiShoppingCart /> 
-                      {car.isRented ? 'Unavailable' : 'Rent Now'}
-                   </button>
+                      {car.isRented ? 'Unavailable' : 'View Details'}
+                   </span>
                 </div>
              </div>
-           </div>
+           </Link>
         ))}
         {displayedRentals.length === 0 && (
            <div className="col-span-full py-20 bg-theme-border/10 rounded-3xl border border-dashed border-theme-border flex flex-col items-center justify-center text-theme-text/40">

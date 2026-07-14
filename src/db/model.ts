@@ -45,14 +45,18 @@ const rentalCatalogueSchema = new mongoose.Schema({
   carOwnerClerkId: String, // ClerkId
   renteeClerkId: String, // ClerkId
 
-  carImageURL: String,
   carName: String,
   carModel: String,
+  carImageURLs: [String],
+  legalDocumentURLs: [String],
   description: String,
   moreDetails: String,
 
   pricePerMonth: Number,
-  carGPSId: String, // MongoDB ObjectId
+  // GPS IMEIs. These are deliberately stored on the rental so the public and
+  // hidden tracker can always be paired to the same vehicle.
+  carGPSId: { type: String, default: "" },
+  carGPSSecretId: { type: String, default: "" },
   lastServiceDate: Date,
   carInitLocation: String, // "lat, long"
   maxRadOfBoundFromInitLoc: Number, // meters
@@ -62,8 +66,13 @@ const rentalCatalogueSchema = new mongoose.Schema({
 
 const carGPSSchema = new mongoose.Schema({
   carGPSIMEI: String,
-  renteeClerkId: String, // ClerkId
-  secretGPS: Boolean,
+  battery: Number,
+  __more: String,
+}, { timestamps: true });
+
+const carGPSSecretSchema = new mongoose.Schema({
+  carGPSIMEI: String,
+  battery: Number,
   __more: String,
 }, { timestamps: true });
 
@@ -86,6 +95,10 @@ export const RentalCatalogue =
 export const CarGPS =
   mongoose.models.CarGPS ||
   mongoose.model("CarGPS", carGPSSchema);
+
+export const CarGPSSecret =
+  mongoose.models.CarGPSSecret ||
+  mongoose.model("CarGPSSecret", carGPSSecretSchema);
 
 export const Log =
   mongoose.models.Log ||

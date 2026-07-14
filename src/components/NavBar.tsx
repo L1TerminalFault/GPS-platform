@@ -4,11 +4,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { SVGProps, ReactNode } from "react";
 import {
 	FiHome,
-	FiShoppingBag,
-	FiFileText,
+	FiNavigation,
+	FiBox,
+	FiShoppingCart,
 	FiSettings,
-	FiCpu,
 } from "react-icons/fi";
+import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 
 type Route = {
@@ -19,23 +20,26 @@ type Route = {
 
 const routesAdmin: Route[] = [
 	{ name: "Home", href: "/home", icon: (p) => <FiHome {...p} /> },
-	{ name: "Monitor", href: "/monitor", icon: (p) => <FiShoppingBag {...p} /> },
-	{ name: "Rentals", href: "/rentals", icon: (p) => <FiCpu {...p} /> },
-	{ name: "Orders", href: "/orders", icon: (p) => <FiFileText {...p} /> },
+	{ name: "Monitor", href: "/monitor", icon: (p) => <FiNavigation {...p} /> },
+	{ name: "Rentals", href: "/rentals", icon: (p) => <FiBox {...p} /> },
+	{ name: "Orders", href: "/orders", icon: (p) => <FiShoppingCart {...p} /> },
 	{ name: "Settings", href: "/settings", icon: (p) => <FiSettings {...p} /> },
 ];
 
 const routesUser: Route[] = [
 	{ name: "Home", href: "/home", icon: (p) => <FiHome {...p} /> },
-	{ name: "Rentals", href: "/rentals", icon: (p) => <FiCpu {...p} /> },
-	{ name: "Orders", href: "/orders", icon: (p) => <FiShoppingBag {...p} /> },
+	{ name: "Monitor", href: "/monitor", icon: (p) => <FiNavigation {...p} /> },
+	{ name: "Rentals", href: "/rentals", icon: (p) => <FiBox {...p} /> },
+	{ name: "Orders", href: "/orders", icon: (p) => <FiShoppingCart {...p} /> },
 	{ name: "Settings", href: "/settings", icon: (p) => <FiSettings {...p} /> },
 ];
 
 export default function NavBar() {
 	const pathname = usePathname();
 	const router = useRouter();
-	const routes = routesAdmin;
+	const { user } = useUser();
+	const isAdmin = (user?.publicMetadata as { role?: string } | undefined)?.role === "admin";
+	const routes = isAdmin ? routesAdmin : routesUser;
 
 	const isActive = (href: string) => pathname.startsWith(href);
 
