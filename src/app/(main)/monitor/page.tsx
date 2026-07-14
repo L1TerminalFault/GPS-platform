@@ -88,7 +88,7 @@ function useVehicleTracker() {
     });
 
     // const socket = io(`http://localhost:4000`);
-    const socket = io(window.location.origin);
+    const socket = io(`https://gps-platform-dka2.onrender.com`);
     socket.on("gps-update", (data: VehicleData[]) => {
       setVehicles(data);
       setHistory((prev) => {
