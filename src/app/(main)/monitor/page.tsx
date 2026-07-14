@@ -87,7 +87,7 @@ function useVehicleTracker() {
       }
     });
 
-    const socket = io(`http://localhost:${process.env.PORT}`);
+    const socket = io(`http://localhost:4000`);
     socket.on("gps-update", (data: VehicleData[]) => {
       setVehicles(data);
       setHistory((prev) => {
