@@ -116,7 +116,7 @@ setInterval(() => {
   io.emit('gps-update', trackers);
 }, 3000); // Emitting every 3 seconds
 
-const PORT = 4000;
+const PORT = process.env.PORT;
 server.listen(PORT, () => {
   console.log(`Mock GPS Socket Server running on ws://localhost:${PORT}`);
   console.log('Emitting real-like dual GPS data (PUB and SEC) every 3 seconds...');
