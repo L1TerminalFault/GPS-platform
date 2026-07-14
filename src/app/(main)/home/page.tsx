@@ -58,7 +58,8 @@ export default function HomePage() {
   }, [showRentsPopup, showGpsPopup]);
 
   useEffect(() => {
-    const socket = io(`http://localhost:4000`);
+    // const socket = io(`http://localhost:4000`);
+    const socket = io(window.location.origin);
     socket.on('gps-update', (data: any[]) => {
       setLiveGpsData(Array.isArray(data) ? data : []);
     });
