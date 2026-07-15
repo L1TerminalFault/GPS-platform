@@ -12,7 +12,7 @@ export async function GET(req: Request) {
       const role = (await currentUser())?.publicMetadata?.role;
       let results = mockDB.Log.find();
       if (role !== "admin") {
-        const userRentals = mockDB.RentalCatalogue.find({ renteeClerkId: userId });
+        const userRentals = mockDB.RentalCatalogue.find().filter((r: any) => r.renteeClerkId === userId || r.carOwnerClerkId === userId);
         const imeis = userRentals.flatMap((r: any) => [r.carGPSId, r.carGPSSecretId]).filter(Boolean);
         results = results.filter((l: any) => imeis.includes(l.carGPSIMEI));
       }
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     const role = (await currentUser())?.publicMetadata?.role;
     let filter = {};
     if (role !== "admin") {
-      const userRentals = await RentalCatalogue.find({ renteeClerkId: userId }).lean();
+      const userRentals = await RentalCatalogue.find({ $or: [{ renteeClerkId: userId }, { carOwnerClerkId: userId }] }).lean();
       const imeis = userRentals.flatMap((r: any) => [r.carGPSId, r.carGPSSecretId]).filter(Boolean);
       filter = { carGPSIMEI: { $in: imeis } };
     }
@@ -42,6 +42,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    // GPS devices/ingestors must authenticate in production. The development
+    // simulator is intentionally allowed without a token.
+    if (process.env.NODE_ENV === "production") {
+      const token = req.headers.get("x-gps-ingest-token");
+      if (!process.env.GPS_INGEST_TOKEN || token !== process.env.GPS_INGEST_TOKEN) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
     if (process.env.dev === "development") {
       const data = await req.json();
       if (Array.isArray(data)) {

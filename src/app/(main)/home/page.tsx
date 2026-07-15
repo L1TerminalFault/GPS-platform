@@ -58,9 +58,9 @@ export default function HomePage() {
   }, [showRentsPopup, showGpsPopup]);
 
   useEffect(() => {
-    // const socket = io(`http://localhost:4000`);
-    const socket = io();
-    socket.on('gps-update', (data: any[]) => {
+    // Live socket payloads are fleet-wide. Non-admins use only authorized API data.
+    const socket = isAdmin ? io() : null;
+    socket?.on('gps-update', (data: any[]) => {
       setLiveGpsData(Array.isArray(data) ? data : []);
     });
 
@@ -79,9 +79,9 @@ export default function HomePage() {
       resolveUsers(clerkIds).finally(() => setLoading(false));
     }).catch(() => setLoading(false));
 
-    return () => { socket.disconnect(); };
+    return () => { socket?.disconnect(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAdmin]);
 
   // GSAP entrance animation
   useEffect(() => {
@@ -98,8 +98,8 @@ export default function HomePage() {
 
   const filteredRentals = useMemo(() => {
     if (isAdmin) return rentals;
-    return rentals.filter(r => r.carOwnerClerkId === user?.id || r.renteeClerkId === user?.id);
-  }, [rentals, isAdmin, user?.id]);
+    return rentals.filter(r => r.isMine);
+  }, [rentals, isAdmin]);
 
   const activeRentals = filteredRentals.filter(r => r.isRented);
   const availableRentals = filteredRentals.filter(r => !r.isRented);
@@ -120,7 +120,7 @@ export default function HomePage() {
   const syncAlerts = useMemo(() => {
     const alerts: any[] = [];
     // For each rental that has both public and secret GPS assigned, check divergence
-    rentals.forEach(r => {
+    filteredRentals.forEach(r => {
       if (!r.carGPSId || !r.carGPSSecretId) return;
       const pubData = liveGpsData.find(g => g.carGPSIMEI === r.carGPSId);
       const secData = liveGpsData.find(g => g.carGPSIMEI === r.carGPSSecretId);
@@ -140,7 +140,7 @@ export default function HomePage() {
       }
     });
     return alerts;
-  }, [liveGpsData, rentals, userMap]);
+  }, [liveGpsData, filteredRentals, userMap]);
 
   const isGpsRegistered = (imei: string) => {
     return rentals.some(r => r.carGPSId === imei || r.carGPSSecretId === imei);
@@ -243,7 +243,7 @@ export default function HomePage() {
         
         <button 
           onClick={() => setNotificationsOpen(true)}
-          className="relative px-3 py-2 text-theme-text/60 hover:text-theme-text hover:bg-theme-card border border-theme-border/50 bg-theme-background rounded-full transition-colors flex items-center justify-center shadow-inner"
+          className="relative p-3 /py-2 text-theme-text/60 hover:text-theme-text hover:bg-theme-card border border-theme-border/50 bg-theme-background rounded-full transition-colors flex items-center justify-center shadow-inner"
         >
           <FiBell className="text-lg" />
           {notificationCount > 0 && (
@@ -315,9 +315,48 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
+          {/* Order Status Breakdown */}
+	  {!isAdmin && <div className="w-full flex-1 bg-theme-card p-6 rounded-3xl shadow-xl border border-theme-border/30 flex flex-col relative overflow-hidden group">
+            <h3 className="font-bold flex items-center gap-2 mb-4 text-sky-400">
+               <FiCalendar /> Order Status
+            </h3>
+            {orderPieData.length > 0 ? (
+              <div className="flex items-center gap-4 flex-1">
+                <div className="w-[100px] h-[100px] shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={orderPieData} dataKey="value" cx="50%" cy="50%" innerRadius={25} outerRadius={42} paddingAngle={3} strokeWidth={0}>
+                        {orderPieData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-col gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <span className="text-theme-text/70">{pendingOrders.length} Pending</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span className="text-theme-text/70">{deliveredOrders.length} Delivered</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                    <span className="text-theme-text/70">{cancelledOrders.length} Cancelled</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <span className="opacity-50 text-sm flex-1 flex items-center">No orders yet</span>
+            )}
+          </div>}
+
+      {isAdmin && <>
       {/* Hero Stat Cards */}
       <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full shrink-0">
-        <div className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-xl border border-theme-border/30 relative overflow-hidden group">
+        {isAdmin && <div className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-xl border border-theme-border/30 relative overflow-hidden group">
           <div className="absolute -right-10 -top-10 text-theme-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
              <FiDollarSign size={160} />
           </div>
@@ -334,9 +373,9 @@ export default function HomePage() {
             ${totalRevenue.toLocaleString()}
           </h2>
           <span className="text-xs text-emerald-400/60 mt-1">{activeRentals.length} active lease(s)</span>
-        </div>
+        </div>}
 
-        <div className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-xl border border-theme-border/30 relative overflow-hidden group">
+        {isAdmin && <div className="flex flex-col bg-theme-card p-6 rounded-3xl shadow-xl border border-theme-border/30 relative overflow-hidden group">
           <div className="absolute -right-6 -bottom-6 text-sky-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
              <FiBox size={140} />
           </div>
@@ -356,7 +395,7 @@ export default function HomePage() {
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> {availableRentals.length} available</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span> {activeRentals.length} rented</span>
           </div>
-        </div>
+        </div>}
 
         {/* ACTIVE RENTS POPUP ANCHOR */}
         <div className="relative z-20" ref={activeRentsRef}>
@@ -403,13 +442,13 @@ export default function HomePage() {
                            <span className="font-bold text-sky-400">{r.carModel}</span>
                            <span className="text-[10px] uppercase tracking-widest text-theme-text/40 border border-theme-border px-1.5 rounded bg-theme-border/20">{r._id?.toString().split('_').pop() || ''}</span>
                         </div>
-                        <span className="text-xs font-semibold flex items-center gap-1.5 mt-1">User: 
+                        {isAdmin && <span className="text-xs font-semibold flex items-center gap-1.5 mt-1">User:
                            {userMap[r.renteeClerkId] ? (
                               <div className="flex items-center gap-1.5"><img src={userMap[r.renteeClerkId].imageUrl} className="w-4 h-4 rounded-full object-cover" alt="rentee" /> <span className="font-black text-theme-text">{userMap[r.renteeClerkId].name}</span></div>
                            ) : (
                               <span className="font-black text-theme-text">{r.renteeClerkId}</span>
                            )}
-                        </span>
+                        </span>}
                         <span className="text-xs text-theme-text/50">Revenue: ${r.pricePerMonth}/mo</span>
                      </div>
                    ))}
@@ -628,6 +667,8 @@ export default function HomePage() {
           </div>
         </div>
       </motion.div>
+
+      </>}
 
       {/* Quick Actions Row */}
       <motion.div

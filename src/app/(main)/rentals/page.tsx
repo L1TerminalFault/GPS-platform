@@ -168,7 +168,7 @@ export default function RentalsPage() {
           <div className="relative z-50" ref={filterRef}>
             <button 
                onClick={() => setShowFilterPopup(!showFilterPopup)}
-               className={`px-3 py-2 border rounded-full transition-colors flex items-center gap-2 text-sm font-semibold ${filter !== "all" ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' : 'border-theme-border/50 hover:bg-theme-card bg-theme-background text-theme-text'}`}
+               className={`px-3 py-2 border rounded-full transition-colors flex items-center gap-2 text-sm font-semibold ${filter !== "all" && false ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' : 'border-theme-border/50 hover:bg-theme-card bg-theme-background text-theme-text'}`}
             >
                <FiFilter />
                <span className="hidden sm:inline">{activeFilterLabel}</span>
@@ -253,7 +253,9 @@ export default function RentalsPage() {
                 </p>
 
                 <div className="mt-auto pt-4 border-t border-theme-border/30 flex justify-between items-center">
-                   <span className="text-[10px] uppercase tracking-widest text-theme-text/40">ID: {car._id?.toString().split('_').pop() || car._id?.toString().slice(-4)}</span>
+                   <span className="text-[10px] uppercase tracking-widest text-theme-text/40">
+		   {/*ID: {car._id?.toString().split('_').pop() || car._id?.toString().slice(-4)}*/}
+		   </span>
                    <span
                      className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${car.isRented ? 'bg-theme-background border border-theme-border/50 text-theme-text/30' : 'bg-theme-accent text-white shadow-theme-accent/20'}`}
                    >

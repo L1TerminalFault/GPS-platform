@@ -304,7 +304,7 @@ export default function RentalDetailPage() {
             </div>
 
             {/* Status Badge */}
-            <div className={`absolute top-4 right-4 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-md shadow-lg border ${rental.isRented ? 'bg-red-500/20 text-red-100 border-red-500/50' : 'bg-emerald-500/20 text-emerald-100 border-emerald-500/50'}`}>
+            <div className={`absolute top-4 right-4 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-md shadow-lg /border ${rental.isRented ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'}`}>
               {rental.isRented ? 'Currently Rented' : 'Available for Rent'}
             </div>
 
@@ -363,7 +363,7 @@ export default function RentalDetailPage() {
                     <span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold block mb-1">Model</span>
                     <span className="font-bold text-theme-text">{rental.carModel}</span>
                   </div>
-                  <div className="bg-theme-background p-4 rounded-2xl border border-theme-border/30 col-span-2 sm:col-span-1">
+                  {isAdmin && <div className="bg-theme-background p-4 rounded-2xl border border-theme-border/30 col-span-2 sm:col-span-1">
                     <span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold block mb-1">GPS IMEIs</span>
                     <div className="flex flex-col gap-1">
                       <span className="font-bold font-mono text-sky-400 text-sm">
@@ -375,7 +375,7 @@ export default function RentalDetailPage() {
                         {rental.carGPSSecretId || "—"}
                       </span>
                     </div>
-                  </div>
+                  </div>}
                   <div className="bg-theme-background p-4 rounded-2xl border border-theme-border/30">
                     <span className="text-[10px] uppercase tracking-widest text-theme-text/40 font-bold block mb-1">Max Radius</span>
                     <span className="font-bold">{rental.maxRadOfBoundFromInitLoc ? `${(rental.maxRadOfBoundFromInitLoc / 1000).toFixed(1)} km` : '—'}</span>
@@ -433,13 +433,13 @@ export default function RentalDetailPage() {
                   <span className="text-4xl font-black text-theme-text">${rental.pricePerMonth?.toLocaleString()}</span>
                   <span className="text-theme-text/40 text-sm font-bold">/month</span>
                 </div>
-                <div className="mt-4 pt-4 border-t border-theme-border/30">
+                <div className="hidden mt-4 pt-4 border-t border-theme-border/30">
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${rental.isRented ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'}`}>
                     <span className={`w-2 h-2 rounded-full ${rental.isRented ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></span>
                     {rental.isRented ? 'Currently Rented' : 'Available Now'}
                   </span>
                 </div>
-                {!rental.isRented && !isAdmin && (
+                {!rental.isRented && user && !isAdmin && (
                   <button 
                     onClick={handleOrder}
                     className="w-full mt-4 bg-theme-accent text-white font-bold py-3 rounded-xl hover:bg-theme-accent/80 transition-colors shadow-lg shadow-theme-accent/20"
@@ -481,7 +481,7 @@ export default function RentalDetailPage() {
 
                 {isAdmin && (
                   <div className="mt-6 pt-6 border-t border-theme-border/30 flex flex-col gap-3">
-                    <span className="text-xs uppercase tracking-widest text-theme-text/40 font-bold">Admin Actions</span>
+                    <span className="hidden text-xs uppercase tracking-widest text-theme-text/40 font-bold">Admin Actions</span>
                     {rental.isRented && (
                       <button
                         onClick={handleUnrent}
@@ -547,8 +547,8 @@ export default function RentalDetailPage() {
                 </div>
               )}
 
-              {/* Location Card */}
-              <div className="bg-theme-card rounded-3xl p-6 border border-theme-border/30 shadow-xl">
+              {/* Operational rental data is visible to administrators only. */}
+              {isAdmin && <><div className="bg-theme-card rounded-3xl p-6 border border-theme-border/30 shadow-xl">
                 <h3 className="font-bold flex items-center gap-2 mb-3 text-violet-400">
                   <FiMapPin /> Location
                 </h3>
@@ -605,6 +605,7 @@ export default function RentalDetailPage() {
                   </div>
                 </div>
               </div>
+              </>}
             </div>
           </div>
         </div>

@@ -34,3 +34,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Production configuration
+
+Set `GPS_INGEST_TOKEN` in the production environment and send it as the
+`x-gps-ingest-token` header from the trusted GPS ingestion service. The built-in
+GPS simulator is development-only and does not broadcast fleet locations in production.

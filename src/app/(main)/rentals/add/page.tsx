@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { FiPlus, FiImage, FiFileText, FiUpload, FiArrowLeft, FiX } from "react-icons/fi";
+import { FiPlus, FiImage, FiFileText, FiUpload, FiArrowLeft, FiX, FiMapPin, FiSearch } from "react-icons/fi";
 import { CgSpinner } from "react-icons/cg";
 import { useRouter } from "next/navigation";
 import { useToastStore, useAppStore } from "@/lib/store";
@@ -18,6 +18,10 @@ export default function AddRentalPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState<number | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState<number | null>(null);
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState<any[]>([]);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const locationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [form, setForm] = useState({
     carName: "",
@@ -25,7 +29,7 @@ export default function AddRentalPage() {
     description: "",
     moreDetails: "",
     pricePerMonth: "",
-    carImageURLs: ["", "", "", "", ""],
+    carImageURLs: [""],
     legalDocumentURLs: [""],
     carInitLocation: "",
     maxRadOfBoundFromInitLoc: "",
@@ -35,6 +39,26 @@ export default function AddRentalPage() {
   const updateFormField = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  useEffect(() => {
+    if (locationTimer.current) clearTimeout(locationTimer.current);
+    const query = locationQuery.trim();
+    if (query.length < 2) {
+      setLocationResults([]);
+      return;
+    }
+    locationTimer.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/places?mode=search&q=${encodeURIComponent(query)}`);
+        const places = await response.json();
+        setLocationResults(Array.isArray(places) ? places : []);
+        setLocationOpen(true);
+      } catch {
+        setLocationResults([]);
+      }
+    }, 350);
+    return () => { if (locationTimer.current) clearTimeout(locationTimer.current); };
+  }, [locationQuery]);
 
   const updateImageURL = (index: number, value: string) => {
     setForm((prev) => {
@@ -46,6 +70,15 @@ export default function AddRentalPage() {
 
   const addLegalDoc = () => {
     setForm((prev) => ({ ...prev, legalDocumentURLs: [...prev.legalDocumentURLs, ""] }));
+  };
+
+  const addImage = () => {
+    setForm((prev) => ({ ...prev, carImageURLs: [...prev.carImageURLs, ""] }));
+  };
+
+  const removeImage = (index: number) => {
+    if (index === 0) return;
+    setForm((prev) => ({ ...prev, carImageURLs: prev.carImageURLs.filter((_, i) => i !== index) }));
   };
 
   const updateLegalDoc = (index: number, value: string) => {
@@ -228,15 +261,35 @@ export default function AddRentalPage() {
                     className="bg-theme-background border border-theme-border/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-theme-accent transition-colors shadow-inner"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-theme-text/60">Initial Location (lat, lng)</label>
-                  <input
-                    type="text"
-                    value={form.carInitLocation}
-                    onChange={(e) => updateFormField("carInitLocation", e.target.value)}
-                    placeholder="9.03, 38.75"
-                    className="bg-theme-background border border-theme-border/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-theme-accent transition-colors shadow-inner"
-                  />
+                <div className="relative flex flex-col gap-2">
+                  <label className="text-xs font-black text-theme-text/60">Initial Location</label>
+                  <div className="flex items-center gap-2 bg-theme-background border border-theme-border/50 rounded-xl px-4 py-3 focus-within:border-theme-accent transition-colors shadow-inner">
+                    <FiSearch className="text-theme-text/40 shrink-0" />
+                    <input
+                      type="text"
+                      value={locationQuery}
+                      onChange={(e) => setLocationQuery(e.target.value)}
+                      onFocus={() => locationResults.length > 0 && setLocationOpen(true)}
+                      placeholder="Search for a location..."
+                      className="w-full bg-transparent text-sm outline-none"
+                    />
+                    {form.carInitLocation && <FiMapPin className="text-emerald-400" />}
+                  </div>
+                  {form.carInitLocation && <span className="text-[10px] text-theme-text/45">Selected coordinates: {form.carInitLocation}</span>}
+                  {locationOpen && locationResults.length > 0 && (
+                    <div className="absolute top-full z-30 mt-1 w-full overflow-hidden rounded-xl border border-theme-border/50 bg-theme-card shadow-2xl">
+                      {locationResults.map((place) => (
+                        <button key={place.id} type="button" onClick={() => {
+                          setLocationQuery(place.name);
+                          updateFormField("carInitLocation", `${place.lat}, ${place.lng}`);
+                          setLocationOpen(false);
+                        }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-theme-accent/10">
+                          <FiMapPin className="shrink-0 text-pink-400" />
+                          <span className="truncate">{place.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-black text-theme-text/60">Max Boundary Radius (m)</label>
@@ -270,9 +323,6 @@ export default function AddRentalPage() {
                 <div className="flex flex-col gap-3">
                   {form.carImageURLs.map((url, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <span className={`text-[9px] font-black uppercase tracking-widest w-14 shrink-0 ${i === 0 ? "text-theme-accent" : "text-theme-text/30"}`}>
-                        {i === 0 ? "Display *" : `Img ${i + 1}`}
-                      </span>
                       <div className="flex-1 flex gap-2 w-full">
                         <input
                           type="url"
@@ -285,9 +335,11 @@ export default function AddRentalPage() {
                           {uploadingImage === i ? <CgSpinner className="animate-spin text-theme-accent" /> : <FiUpload />}
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, true, i)} />
                         </label>
+                        {i > 0 && <button type="button" onClick={() => removeImage(i)} className="shrink-0 p-2 w-11 h-11 flex justify-center items-center text-red-400 border border-red-500/30 bg-theme-background hover:bg-red-500/10 rounded-xl transition-colors"><FiX /></button>}
                       </div>
                     </div>
                   ))}
+                  <button type="button" onClick={addImage} className="mt-1 flex items-center gap-2 text-xs font-black text-theme-text/50 hover:text-theme-accent uppercase tracking-widest w-fit transition-colors"><FiPlus className="text-sm" /> Add Image</button>
                   <p className="text-[10px] text-theme-text/40">Display image is required; additional images are optional.</p>
                 </div>
               </div>

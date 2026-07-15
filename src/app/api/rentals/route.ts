@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { dbConnect, Order, RentalCatalogue } from "@/db/model";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { mockDB } from "@/lib/mock-data";
+import { serializeRental } from "@/lib/rental-access";
 
 export async function GET(req: Request) {
   try {
     const { userId } = await auth();
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const role = (await currentUser())?.publicMetadata?.role;
+    const role = userId ? (await currentUser())?.publicMetadata?.role : undefined;
     const isAdmin = role === "admin";
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
@@ -16,33 +16,27 @@ export async function GET(req: Request) {
       if (id) {
         const res = mockDB.RentalCatalogue.findById(id);
         if (!res) return NextResponse.json({ error: "Not found" }, { status: 404 });
-        if (!isAdmin && res.isRented && res.carOwnerClerkId !== userId && res.renteeClerkId !== userId) {
-          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-        return NextResponse.json(res);
+        // if (!isAdmin && res.isRented && res.carOwnerClerkId !== userId && res.renteeClerkId !== userId) {
+        //   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        // }
+        return NextResponse.json(serializeRental(res, { isAdmin, userId }));
       }
       let results = mockDB.RentalCatalogue.find();
-      if (!isAdmin) {
-         results = results.filter((r: any) => !r.isRented || r.carOwnerClerkId === userId || r.renteeClerkId === userId);
-      }
+      // if (!isAdmin) {
+      //    results = results.filter((r: any) => !r.isRented || r.carOwnerClerkId === userId || r.renteeClerkId === userId);
+      // }
       results.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return NextResponse.json(results);
+      return NextResponse.json(results.map((r: any) => serializeRental(r, { isAdmin, userId })));
     }
-    let filter = {};
-    if (!isAdmin) {
-      filter = { $or: [{ isRented: false }, { carOwnerClerkId: userId }, { renteeClerkId: userId }] };
-    }
+    const filter = {};
 
     if (id) {
       const result = await RentalCatalogue.findById(id);
       if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
-      if (!isAdmin && result.isRented && result.carOwnerClerkId !== userId && result.renteeClerkId !== userId) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-      return NextResponse.json(result);
+      return NextResponse.json(serializeRental(result, { isAdmin, userId }));
     }
     const results = await RentalCatalogue.find(filter).sort({ createdAt: -1 });
-    return NextResponse.json(results);
+    return NextResponse.json(results.map((r: any) => serializeRental(r, { isAdmin, userId })));
   } catch (err: any) {
 	  console.error("Error: ", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

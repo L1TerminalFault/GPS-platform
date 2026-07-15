@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import gsap from "gsap";
-import { FiPackage, FiClock, FiCheck, FiX, FiTruck, FiXCircle } from "react-icons/fi";
+import { FiPackage, FiClock, FiCheck, FiX, FiTruck, FiXCircle, FiMapPin } from "react-icons/fi";
 import { CgSpinner } from "react-icons/cg";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -116,19 +116,21 @@ export default function OrderPage() {
 
       <div ref={listRef} className="flex flex-col gap-3 relative z-10">
         {displayedOrders.map((o, idx) => {
-           let statusColor = "bg-amber-500/10 text-amber-500 border-amber-500/20";
+           let statusColor = "/bg-amber-500/10 text-amber-500 border-amber-500/20";
            let StatusIcon = FiClock;
            
            if (o.status?.toLowerCase() === "delivered") {
-             statusColor = "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
+             statusColor = "/bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
              StatusIcon = FiCheck;
            } else if (o.status?.toLowerCase() === "cancelled") {
-             statusColor = "bg-red-500/10 text-red-500 border-red-500/20";
+             statusColor = "/bg-red-500/10 text-red-500 border-red-500/20";
              StatusIcon = FiX;
            }
 
            const userData = userMap[o.userClerkId] || { name: o.userClerkId, imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(o.userClerkId)}&background=random&size=128&bold=true` };
            const isUpdating = updatingId === o._id;
+           const orderRental = rentals[o.rentCatalogueId];
+           const orderLocation = o.carInitLocation || orderRental?.carInitLocation;
 
            return (
              <div 
@@ -148,12 +150,18 @@ export default function OrderPage() {
                      <span className="text-[10px] uppercase tracking-widest text-theme-text/40 flex items-center gap-1">
                        <FiClock className="text-[8px]" /> {formatTime(o.createdAt)}
                      </span>
+                     {orderLocation && (
+                       <span className="text-[11px] text-sky-400 flex items-center gap-1.5 max-w-[220px] truncate">
+                         <FiMapPin className="shrink-0" />
+                         <PlaceName coords={orderLocation} className="truncate" />
+                       </span>
+                     )}
                   </div>
                </div>
 
                {/* RIGHT: Status + Action Buttons */}
                <div className="flex items-center gap-3 shrink-0">
-                  <div className={`px-3 py-1 flex items-center gap-1.5 rounded-full border text-xs font-black uppercase tracking-wider ${statusColor}`}>
+                  <div className={`px-3 py-1 flex items-center gap-1.5 rounded-full opacity-70 /border text-xs font-black uppercase tracking-wider ${statusColor}`}>
                      <StatusIcon className="text-xs" />
                      {o.status || 'Pending'}
                   </div>
@@ -163,14 +171,14 @@ export default function OrderPage() {
                       {isAdmin && <Link
                         href={`/rentals/${o.rentCatalogueId}?orderId=${o._id}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full text-xs font-bold hover:bg-emerald-500/20 transition-colors"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 /border border-emerald-500/30 rounded-full text-xs font-bold hover:bg-emerald-500/20 transition-colors"
                       >
                         <FiTruck className="text-xs" /> Deliver
                       </Link>}
                       <button
                         onClick={(e) => updateOrderStatus(o._id, "Cancelled", e)}
                         disabled={isUpdating}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded-full text-xs font-bold hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-500/10 text-red-400 /border border-red-500/30 rounded-full text-xs font-bold hover:bg-red-500/20 transition-colors disabled:opacity-50"
                       >
                         <FiXCircle className="text-xs" /> Cancel
                       </button>
@@ -239,10 +247,10 @@ export default function OrderPage() {
                         <span className="text-xs text-theme-text/50">{new Date(selectedOrder.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border ${
-                      selectedOrder.status?.toLowerCase() === 'delivered' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                      selectedOrder.status?.toLowerCase() === 'cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
-                      'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                    <span className={`px-3 py-1 rounded-full opacity-70 text-xs font-bold uppercase tracking-widest /border ${
+                      selectedOrder.status?.toLowerCase() === 'delivered' ? '/bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                      selectedOrder.status?.toLowerCase() === 'cancelled' ? '/bg-red-500/10 text-red-400 border-red-500/30' :
+                      '/bg-amber-500/10 text-amber-400 border-amber-500/30'
                     }`}>
                        {selectedOrder.status}
                     </span>
@@ -273,21 +281,21 @@ export default function OrderPage() {
                             )}
                             
                             <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div className="bg-theme-card p-2 rounded-lg">
+			    {isAdmin && <div className="bg-theme-card p-2 rounded-lg">
                                 <span className="text-theme-text/40 block mb-0.5">GPS IMEIs</span>
                                 <div className="flex flex-col gap-0.5">
                                   <span className="font-bold font-mono text-[11px] text-sky-400">{car.carGPSId || "—"}</span>
                                   <span className="font-bold font-mono text-[11px] text-red-400/80">{car.carGPSSecretId || "—"}</span>
                                 </div>
-                              </div>
+                              </div>}
                               <div className="bg-theme-card p-2 rounded-lg">
                                 <span className="text-theme-text/40 block mb-0.5">Status</span>
                                 <span className={`font-bold ${car.isRented ? 'text-red-400' : 'text-emerald-400'}`}>{car.isRented ? 'Rented' : 'Available'}</span>
                               </div>
-                              <div className="bg-theme-card p-2 rounded-lg col-span-2">
+                              {(selectedOrder.carInitLocation || car.carInitLocation) && <div className="bg-theme-card p-2 rounded-lg col-span-2">
                                 <span className="text-theme-text/40 block mb-0.5">Location</span>
-                                <PlaceName coords={car.carInitLocation} className="font-bold text-[11px]" />
-                              </div>
+                                <PlaceName coords={selectedOrder.carInitLocation || car.carInitLocation} className="font-bold text-[11px]" />
+                              </div>}
                               <div className="bg-theme-card p-2 rounded-lg col-span-2">
                                 <span className="text-theme-text/40 block mb-0.5">Last Service</span>
                                 <span className="font-bold">{car.lastServiceDate ? new Date(car.lastServiceDate).toLocaleDateString() : '—'}</span>
@@ -307,14 +315,14 @@ export default function OrderPage() {
                      {isAdmin && <Link
                        href={`/rentals/${selectedOrder.rentCatalogueId}?orderId=${selectedOrder._id}`}
                        onClick={(e) => e.stopPropagation()}
-                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl font-bold text-sm hover:bg-emerald-500/20 transition-colors"
+                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 text-emerald-400 /border border-emerald-500/30 rounded-xl font-bold text-sm hover:bg-emerald-500/20 transition-colors"
                      >
                        <FiTruck /> Deliver & Assign GPS
                      </Link>}
                      <button
                        onClick={(e) => updateOrderStatus(selectedOrder._id, "Cancelled", e)}
                        disabled={updatingId === selectedOrder._id}
-                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded-xl font-bold text-sm hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 text-red-400 /border border-red-500/30 rounded-xl font-bold text-sm hover:bg-red-500/20 transition-colors disabled:opacity-50"
                      >
                        <FiXCircle /> Cancel Order
                      </button>

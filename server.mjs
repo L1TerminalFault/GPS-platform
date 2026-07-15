@@ -151,6 +151,9 @@ let trackers = [];
 const startLat = 9.03;
 const startLng = 38.75;
 
+// The simulated tracker feed is a development aid only. Production receives
+// locations through the authenticated ingestion endpoint instead.
+if (dev) {
 for (let i = 0; i < 5; i++) {
   const baseTracker = {
     carIdx: i,
@@ -287,10 +290,10 @@ setInterval(() => {
 
   io.emit("gps-update", trackers);
 }, 3000);
+}
 
 
 httpServer.listen(port, () => {
   console.log(`Server running on http://${hostname}:${port}`);
-  console.log("Socket.IO running on same origin");
-  console.log("Emitting real-like dual GPS data every 3 seconds...");
+  if (dev) console.log("Socket.IO development simulator running on same origin");
 });

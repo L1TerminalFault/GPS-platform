@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +12,10 @@ export async function POST(req: Request) {
 
     const names: Record<string, { name: string, imageUrl: string }> = {};
     const uniqueIds = [...new Set(ids.filter((id: unknown) => typeof id === "string" && id))] as string[];
+    const isAdmin = (await currentUser())?.publicMetadata?.role === "admin";
+    if (!isAdmin && uniqueIds.some((id) => id !== userId)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await Promise.all(
       uniqueIds.map(async (id) => {

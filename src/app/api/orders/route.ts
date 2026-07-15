@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dbConnect, Order } from "@/db/model";
+import { dbConnect, Order, RentalCatalogue } from "@/db/model";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { mockDB } from "@/lib/mock-data";
 
@@ -16,7 +16,10 @@ export async function GET(req: Request) {
         filter.userClerkId = userId;
       }
       const results = mockDB.Order.find(filter).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return NextResponse.json(results);
+      return NextResponse.json(results.map((order: any) => {
+        const rental = mockDB.RentalCatalogue.findById(order.rentCatalogueId);
+        return { ...order, carInitLocation: rental?.carInitLocation || "" };
+      }));
     }
     await dbConnect();
     
@@ -29,8 +32,16 @@ export async function GET(req: Request) {
       filter = { userClerkId: userId };
     }
 
-    const results = await Order.find(filter).sort({ createdAt: -1 });
-    return NextResponse.json(results);
+    const results = await Order.find(filter).sort({ createdAt: -1 }).lean();
+    const rentalIds = [...new Set(results.map((order: any) => order.rentCatalogueId).filter(Boolean))];
+    const rentalLocations = await RentalCatalogue.find({ _id: { $in: rentalIds } })
+      .select({ _id: 1, carInitLocation: 1 })
+      .lean();
+    const locations = new Map(rentalLocations.map((rental: any) => [String(rental._id), rental.carInitLocation]));
+    return NextResponse.json(results.map((order: any) => ({
+      ...order,
+      carInitLocation: locations.get(String(order.rentCatalogueId)) || "",
+    })));
   } catch (err: any) {
 	  console.error("Error: ", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

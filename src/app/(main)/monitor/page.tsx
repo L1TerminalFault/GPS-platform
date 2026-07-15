@@ -8,6 +8,7 @@ import gsap from "gsap";
 import { io } from "socket.io-client";
 import { useAppStore } from "@/lib/store";
 import { PlaceName } from "@/components/PlaceName";
+import { useUser } from "@clerk/nextjs";
 
 const mapStyles = {
   cartodark: { name: "Carto Dark Matter", url: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" },
@@ -67,7 +68,7 @@ const PLACE_GLYPHS: Record<string, string> = {
   place: "•",
 };
 
-function useVehicleTracker() {
+function useVehicleTracker(enableLiveStream: boolean) {
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [history, setHistory] = useState<Record<string, number[][]>>({});
 
@@ -84,8 +85,18 @@ function useVehicleTracker() {
           initialHistory[l.carGPSIMEI].push([parseFloat(l.longitude), parseFloat(l.latitude)]);
         });
         setHistory(initialHistory);
+        setVehicles(
+          Object.values(
+            sorted.reduce((latest: Record<string, VehicleData>, log: any) => {
+              latest[log.carGPSIMEI] = log;
+              return latest;
+            }, {})
+          )
+        );
       }
     });
+
+    if (!enableLiveStream) return;
 
     // const socket = io(`http://localhost:4000`);
     const socket = io();
@@ -107,14 +118,17 @@ function useVehicleTracker() {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [enableLiveStream]);
 
   return { vehicles, history };
 }
 
 export default function MonitorPage() {
-  const { vehicles, history } = useVehicleTracker();
+  const { user } = useUser();
+  const isAdmin = (user?.publicMetadata as { role?: string } | undefined)?.role === "admin";
+  const { vehicles, history } = useVehicleTracker(isAdmin);
   const { usersMap: userMap, resolveUsers, rentals, ensureRentals } = useAppStore();
+  const [privateMonitorRentals, setPrivateMonitorRentals] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<PlaceItem | null>(null);
 
@@ -150,6 +164,14 @@ export default function MonitorPage() {
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (isAdmin) return;
+    fetch("/api/monitor")
+      .then((response) => response.json())
+      .then((data) => setPrivateMonitorRentals(Array.isArray(data) ? data : []))
+      .catch(() => setPrivateMonitorRentals([]));
+  }, [isAdmin]);
 
   const loadNearby = useCallback(
     async (lat: number, lng: number, zoom: number) => {
@@ -205,6 +227,19 @@ export default function MonitorPage() {
   }, [placeSearch]);
 
   const pairedVehicles = useMemo(() => {
+    if (!isAdmin) {
+      return privateMonitorRentals.map((rental) => ({
+        groupId: rental._id,
+        pub: vehicles.find((vehicle) => vehicle.carGPSIMEI === rental.carGPSId) || null,
+        sec: null,
+        diverge: rental.stolen,
+        isUnregistered: false,
+        isAssigned: true,
+        rental: { ...rental, carImageURLs: rental.carImageURL ? [rental.carImageURL] : [] },
+        owner: rental.owner,
+        renter: rental.renter,
+      }));
+    }
     const map: Record<string, any> = {};
     vehicles.forEach((v) => {
       const rental = rentals.find((r) => r.carGPSId === v.carGPSIMEI || r.carGPSSecretId === v.carGPSIMEI);
@@ -239,7 +274,7 @@ export default function MonitorPage() {
       results.push({ groupId: key, ...g });
     }
     return results;
-  }, [vehicles, rentals]);
+  }, [vehicles, rentals, isAdmin, privateMonitorRentals]);
 
   const assignedCars = useMemo(() => pairedVehicles.filter((p) => p.isAssigned).length, [pairedVehicles]);
   const unassignedUnits = useMemo(() => pairedVehicles.filter((p) => p.isUnregistered).length, [pairedVehicles]);
@@ -390,14 +425,14 @@ export default function MonitorPage() {
             Places {showPlaces ? "On" : "Off"}
           </button>
 
-          <button
+          {isAdmin && false && <button
             onClick={() => setIs3D(!is3D)}
             className={`px-4 py-2 border rounded-full font-bold text-sm transition-colors ${
               is3D ? "bg-theme-accent text-white border-theme-accent/50" : "bg-theme-card border-theme-border text-theme-text/60"
             }`}
           >
             {is3D ? "3D View" : "2D View"}
-          </button>
+          </button>}
 
           <button
             onClick={toggleFullscreen}
@@ -554,7 +589,7 @@ export default function MonitorPage() {
                   anchor="bottom"
                   onClick={(e) => {
                     e.originalEvent.stopPropagation();
-                    const rental = rentals.find((r) => r._id === p.groupId);
+                    const rental = p.rental || rentals.find((r) => r._id === p.groupId);
                     setSelectedPlace(null);
                     setSelected({
                       ...displayV,
@@ -563,6 +598,8 @@ export default function MonitorPage() {
                       pub: p.pub,
                       sec: p.sec,
                       renteeClerkId: p.renteeClerkId,
+                      owner: p.owner,
+                      renter: p.renter,
                       isUnregistered,
                       rental,
                     });
@@ -589,7 +626,7 @@ export default function MonitorPage() {
                     )}
 
                     <span
-                      className={`absolute w-full h-full rounded-full animate-ping -z-10 bottom-0 left-0 ${
+                      className={`absolute size-4 rounded-full animate-ping -z-10 bottom-0 left-[40%] ${
                         isStolenState && isSecretMarker
                           ? "bg-red-500/80"
                           : isStolenState && !isSecretMarker
@@ -614,9 +651,9 @@ export default function MonitorPage() {
                         {isUnregistered
                           ? "UNREGISTERED"
                           : isStolenState
-                            ? isSecretMarker
-                              ? "SECRET REAL"
-                              : "PUB DIVERGED"
+                            ? isAdmin
+                              ? isSecretMarker ? "SECRET REAL" : "PUB DIVERGED"
+                              : "POSSIBLE THEFT"
                             : `RENTAL-${String(p.groupId).slice(-4)}`}
                       </div>
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -650,7 +687,7 @@ export default function MonitorPage() {
             }
             const displayV = p.pub || p.sec;
             if (!displayV) return null;
-            return <Fragment key={p.groupId}>{renderMarker(displayV, "MAIN", false, false)}</Fragment>;
+            return <Fragment key={p.groupId}>{renderMarker(displayV, "MAIN", false, isStolen)}</Fragment>;
           })}
 
           {selected && (
@@ -720,7 +757,12 @@ export default function MonitorPage() {
                       </div>
                       <div className="flex justify-between items-center mb-2 pb-2 border-b border-[#333]">
                         <span className="text-xs text-[#888] font-semibold">Driver</span>
-                        {selected.renteeClerkId && userMap[selected.renteeClerkId] ? (
+                        {selected.renter ? (
+                          <div className="flex items-center gap-2">
+                            {selected.renter.imageUrl && <img src={selected.renter.imageUrl} className="w-5 h-5 rounded-full object-cover" alt="" />}
+                            <span className="font-bold text-[#eee]">{selected.renter.name}</span>
+                          </div>
+                        ) : selected.renteeClerkId && userMap[selected.renteeClerkId] ? (
                           <div className="flex items-center gap-2">
                             <img
                               src={userMap[selected.renteeClerkId].imageUrl}
@@ -735,7 +777,12 @@ export default function MonitorPage() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-[#888] font-semibold">Owner</span>
-                        {selected.rental?.carOwnerClerkId && userMap[selected.rental.carOwnerClerkId] ? (
+                        {selected.owner ? (
+                          <div className="flex items-center gap-2">
+                            {selected.owner.imageUrl && <img src={selected.owner.imageUrl} className="w-5 h-5 rounded-full object-cover" alt="" />}
+                            <span className="font-bold text-[#aaa] text-xs">{selected.owner.name}</span>
+                          </div>
+                        ) : selected.rental?.carOwnerClerkId && userMap[selected.rental.carOwnerClerkId] ? (
                           <span className="font-bold text-[#aaa] text-xs">
                             {userMap[selected.rental.carOwnerClerkId].name}
                           </span>
@@ -757,7 +804,7 @@ export default function MonitorPage() {
                           )}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center mt-1 gap-3">
+                      {isAdmin && <div className="flex justify-between items-center mt-1 gap-3">
                         <span className="text-xs text-[#888] font-semibold shrink-0">SEC Track</span>
                         <span
                           className={`font-bold text-right text-xs ${
@@ -770,7 +817,7 @@ export default function MonitorPage() {
                             "OFFLINE"
                           )}
                         </span>
-                      </div>
+                      </div>}
                     </>
                   )}
                 </div>
@@ -792,7 +839,7 @@ export default function MonitorPage() {
           )}
         </Map>
 
-        <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 pointer-events-none">
+        {isAdmin && <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 pointer-events-none">
           <div className="backdrop-blur-md bg-[#0f0f11bc] border border-theme-border/50 px-4 py-3 rounded-2xl flex items-center gap-3 shadow-lg">
             <div className="p-2 bg-theme-accent/20 rounded-full text-theme-accent">
               <FiList />
@@ -815,7 +862,7 @@ export default function MonitorPage() {
           <p className="text-[10px] uppercase font-bold text-theme-text/30 bg-[#0f0f11bc] px-2 py-1 rounded-lg backdrop-blur-md">
             Last Hour Trajectories
           </p>
-        </div>
+        </div>}
       </div>
     </div>
   );

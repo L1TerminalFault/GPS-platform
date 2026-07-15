@@ -11,7 +11,7 @@ export async function GET(req: Request) {
       if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
       const role = (await currentUser())?.publicMetadata?.role;
-      const rentals = role === "admin" ? [] : mockDB.RentalCatalogue.find({ renteeClerkId: userId });
+      const rentals = role === "admin" ? [] : mockDB.RentalCatalogue.find().filter((r: any) => r.renteeClerkId === userId || r.carOwnerClerkId === userId);
       const imeis = rentals.flatMap((r: any) => [r.carGPSId, r.carGPSSecretId]).filter(Boolean);
       const matches = (gps: any) => role === "admin" || imeis.includes(gps.carGPSIMEI);
       const pubResults = mockDB.CarGPS.find().filter(matches).map((r: any) => ({ ...r, secretGPS: false }));
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     const role = (await currentUser())?.publicMetadata?.role;
     let filter: any = {};
     if (role !== "admin") {
-      const rentals = await RentalCatalogue.find({ renteeClerkId: userId }).lean();
+      const rentals = await RentalCatalogue.find({ $or: [{ renteeClerkId: userId }, { carOwnerClerkId: userId }] }).lean();
       const imeis = rentals.flatMap((r: any) => [r.carGPSId, r.carGPSSecretId]).filter(Boolean);
       filter = { carGPSIMEI: { $in: imeis } };
     }
