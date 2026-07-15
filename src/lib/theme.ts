@@ -22,15 +22,15 @@ export const defaultThemes: Theme[] = [
     accent: "rgba(255, 255, 255, 0.1)",
     borderCol: "rgba(255, 255, 255, 0.1)",
   },
-  {
-    id: "light",
-    name: "Light Clean",
-    bg: "#f3f4f6", // tailwind gray-100
-    fg: "#111827", // tailwind gray-900
-    cardBg: "#ffffff",
-    accent: "rgba(0, 0, 0, 0.05)",
-    borderCol: "rgba(0, 0, 0, 0.1)",
-  },
+  // {
+  //   id: "light",
+  //   name: "Light Clean",
+  //   bg: "#f3f4f6", // tailwind gray-100
+  //   fg: "#111827", // tailwind gray-900
+  //   cardBg: "#ffffff",
+  //   accent: "rgba(0, 0, 0, 0.05)",
+  //   borderCol: "rgba(0, 0, 0, 0.1)",
+  // },
   {
     id: "midnight",
     name: "Midnight Blue",
@@ -139,15 +139,15 @@ export const defaultThemes: Theme[] = [
     accent: "#22c55e",
     borderCol: "rgba(34, 197, 94, 0.2)",
   },
-  {
-    id: "sakura",
-    name: "Sakura Blossom",
-    bg: "#fdf2f8",
-    fg: "#831843",
-    cardBg: "#ffffff",
-    accent: "#f472b6",
-    borderCol: "rgba(0, 0, 0, 0.05)",
-  },
+  // {
+  //   id: "sakura",
+  //   name: "Sakura Blossom",
+  //   bg: "#fdf2f8",
+  //   fg: "#831843",
+  //   cardBg: "#ffffff",
+  //   accent: "#f472b6",
+  //   borderCol: "rgba(0, 0, 0, 0.05)",
+  // },
 ];
 
 type ThemeStore = {
