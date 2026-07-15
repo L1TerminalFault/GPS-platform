@@ -59,7 +59,7 @@ export default function HomePage() {
 
   useEffect(() => {
     // Live socket payloads are fleet-wide. Non-admins use only authorized API data.
-    const socket = isAdmin ? io() : null;
+    const socket = isAdmin ? io("/dashboard") : null;
     socket?.on('gps-update', (data: any[]) => {
       setLiveGpsData(Array.isArray(data) ? data : []);
     });

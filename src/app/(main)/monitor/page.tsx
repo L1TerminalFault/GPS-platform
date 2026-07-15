@@ -99,7 +99,7 @@ function useVehicleTracker(enableLiveStream: boolean) {
     if (!enableLiveStream) return;
 
     // const socket = io(`http://localhost:4000`);
-    const socket = io();
+    const socket = io("/dashboard");
     socket.on("gps-update", (data: VehicleData[]) => {
       setVehicles(data);
       setHistory((prev) => {
