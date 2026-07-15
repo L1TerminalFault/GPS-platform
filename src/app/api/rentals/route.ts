@@ -28,6 +28,7 @@ export async function GET(req: Request) {
       results.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       return NextResponse.json(results.map((r: any) => serializeRental(r, { isAdmin, userId })));
     }
+    await dbConnect();
     const filter = {};
 
     if (id) {

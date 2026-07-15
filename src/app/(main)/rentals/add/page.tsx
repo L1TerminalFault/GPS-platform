@@ -22,6 +22,7 @@ export default function AddRentalPage() {
   const [locationResults, setLocationResults] = useState<any[]>([]);
   const [locationOpen, setLocationOpen] = useState(false);
   const locationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextLocationSearch = useRef(false);
 
   const [form, setForm] = useState({
     carName: "",
@@ -41,6 +42,11 @@ export default function AddRentalPage() {
   };
 
   useEffect(() => {
+    if (skipNextLocationSearch.current) {
+      skipNextLocationSearch.current = false;
+      return;
+    }
+
     if (locationTimer.current) clearTimeout(locationTimer.current);
     const query = locationQuery.trim();
     if (query.length < 2) {
@@ -268,7 +274,13 @@ export default function AddRentalPage() {
                     <input
                       type="text"
                       value={locationQuery}
-                      onChange={(e) => setLocationQuery(e.target.value)}
+                      onChange={(e) => {
+			      setLocationQuery(e.target.value);
+
+			      if (form.carInitLocation) {
+				      updateFormField("carInitLocation", "");
+			      }
+		      }}
                       onFocus={() => locationResults.length > 0 && setLocationOpen(true)}
                       placeholder="Search for a location..."
                       className="w-full bg-transparent text-sm outline-none"
@@ -277,11 +289,15 @@ export default function AddRentalPage() {
                   </div>
                   {form.carInitLocation && <span className="text-[10px] text-theme-text/45">Selected coordinates: {form.carInitLocation}</span>}
                   {locationOpen && locationResults.length > 0 && (
-                    <div className="absolute top-full z-30 mt-1 w-full overflow-hidden rounded-xl border border-theme-border/50 bg-theme-card shadow-2xl">
+                    <div className="absolute top-full z-30 mt-1 w-full backdrop-blur-xl overflow-hidden rounded-xl border border-theme-border/50 bg-theme-card shadow-2xl">
                       {locationResults.map((place) => (
                         <button key={place.id} type="button" onClick={() => {
+			  skipNextLocationSearch.current = true;
+
                           setLocationQuery(place.name);
+
                           updateFormField("carInitLocation", `${place.lat}, ${place.lng}`);
+			  setLocationResults([]);
                           setLocationOpen(false);
                         }} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm hover:bg-theme-accent/10">
                           <FiMapPin className="shrink-0 text-pink-400" />

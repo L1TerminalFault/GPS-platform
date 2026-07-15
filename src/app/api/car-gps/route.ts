@@ -4,7 +4,6 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { mockDB } from "@/lib/mock-data";
 
 export async function GET(req: Request) {
-	console.log("dev: ", process.env.dev);
   try {
     if (process.env.dev === "development") {
       const { userId } = await auth();
