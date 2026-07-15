@@ -128,7 +128,7 @@ import next from "next";
 import { Server } from "socket.io";
 
 // const dev = process.env.NODE_ENV !== "production";
-const dev = "development";
+const dev = process.env.dev === "development";
 const hostname = "0.0.0.0";
 const port = process.env.PORT || 3000;
 
