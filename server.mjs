@@ -34,8 +34,13 @@ const io = new Server(httpServer, {
 });
 
 
-// Last known GPS state
-let trackers = [];
+// Last known GPS state, keyed by the GPS unit's socket connection so that
+// each connected device keeps its own slot instead of clobbering the others.
+const trackersByDevice = new Map();
+
+function getAllTrackers() {
+  return Array.from(trackersByDevice.values()).flat();
+}
 
 
 // ===============================
@@ -71,15 +76,19 @@ deviceIO.on("connection", (socket) => {
 
 
 
-      trackers = data;
+      // Store this device's own packet in its own slot instead of
+      // overwriting the entire fleet's state.
+      trackersByDevice.set(socket.id, data);
 
-
+      const trackers = getAllTrackers();
 
       console.log(
         "GPS PACKET RECEIVED",
         "| Device:",
         socket.id,
-        "| Trackers:",
+        "| This packet:",
+        data.length,
+        "| Total fleet:",
         trackers.length,
         "| Time:",
         new Date().toISOString()
@@ -87,7 +96,8 @@ deviceIO.on("connection", (socket) => {
 
 
 
-      // Save logs
+      // Save logs (only the newly received packet, not the whole merged
+      // fleet, to avoid re-writing unchanged devices' logs every time)
       try {
 
         await fetch(
@@ -99,7 +109,7 @@ deviceIO.on("connection", (socket) => {
               "Content-Type": "application/json",
             },
 
-            body: JSON.stringify(trackers),
+            body: JSON.stringify(data),
           }
         );
 
@@ -148,6 +158,15 @@ deviceIO.on("connection", (socket) => {
         socket.id
       );
 
+      // Drop this device's slot so it no longer counts toward the fleet,
+      // then let dashboards know the fleet composition changed.
+      trackersByDevice.delete(socket.id);
+
+      dashboardIO.emit(
+        "gps-update",
+        getAllTrackers()
+      );
+
     }
   );
 
@@ -175,7 +194,10 @@ dashboardIO.on("connection", (socket) => {
 
 
 
-  // Immediately send current fleet state
+  // Immediately send current fleet state (merged across all connected
+  // GPS units, not just whichever one reported last)
+
+  const trackers = getAllTrackers();
 
   if (trackers.length > 0) {
 
