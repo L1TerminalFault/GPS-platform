@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "export $(cat .env | xargs) && if [ \"$dev\" = \"development\" ]; then echo \"Development Environment\"; node server.mjs; else echo \"Production Environment\"; next start; fi",
+    "start": "export $(cat .env | xargs) && if [ \"$dev\" = \"development\" ]; then echo \"Development Environment\"; node --max-old-space-size=512 server.mjs; else echo \"Production Environment\"; next start; fi",
     "lint": "eslint"
   },
   "dependencies": {
